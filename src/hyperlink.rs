@@ -48,10 +48,9 @@ fn host() -> &'static str {
 
     HOSTNAME
         .get_or_init(|| {
-            nix::unistd::gethostname()
-                .ok()
-                .and_then(|h| h.into_string().ok())
-                .unwrap_or_default()
+            std::env::var("TRUEOS_HOSTNAME")
+                .or_else(|_| std::env::var("HOSTNAME"))
+                .unwrap_or_else(|_| String::from("TRUEOS"))
         })
         .as_ref()
 }

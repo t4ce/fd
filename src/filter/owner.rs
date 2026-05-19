@@ -1,5 +1,4 @@
 use anyhow::{Result, anyhow};
-use nix::unistd::{Group, User};
 use std::fs;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,22 +35,10 @@ impl OwnerFilter {
         }
 
         let uid = Check::parse(fst, |s| {
-            if let Ok(uid) = s.parse() {
-                Ok(uid)
-            } else {
-                User::from_name(s)?
-                    .map(|user| user.uid.as_raw())
-                    .ok_or_else(|| anyhow!("'{}' is not a recognized user name", s))
-            }
+            parse_system_owner_id(s, "user")
         })?;
         let gid = Check::parse(snd, |s| {
-            if let Ok(gid) = s.parse() {
-                Ok(gid)
-            } else {
-                Group::from_name(s)?
-                    .map(|group| group.gid.as_raw())
-                    .ok_or_else(|| anyhow!("'{}' is not a recognized group name", s))
-            }
+            parse_system_owner_id(s, "group")
         })?;
 
         Ok(OwnerFilter { uid, gid })
@@ -71,6 +58,12 @@ impl OwnerFilter {
 
         self.uid.check(md.uid()) && self.gid.check(md.gid())
     }
+}
+
+fn parse_system_owner_id(input: &str, kind: &str) -> Result<u32> {
+    input
+        .parse()
+        .map_err(|_| anyhow!("TRUEOS owner filters only accept numeric {kind} ids"))
 }
 
 impl<T: PartialEq> Check<T> {
